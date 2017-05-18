@@ -40,7 +40,7 @@ class Vector:
         return self * other
 
     def __add__(self, other):
-        return Vector(self.x + other.x, self.y * other.y, self.z + other.z)
+        return Vector(self.x + other.x, self.y + other.y, self.z + other.z)
 
     def __iadd__(self, other):
         self.x += other.x
@@ -61,9 +61,9 @@ class Vector:
         return Vector(self.x / other, self.y / other, self.z / other)
 
     def __itruediv__(self, other):
-        self.x /= other.x
-        self.y /= other.y
-        self.z /= other.z
+        self.x /= other
+        self.y /= other
+        self.z /= other
         return self
 
     def __neg__(self):
@@ -83,3 +83,8 @@ class Vector:
 
     def __str__(self):
         return "({0.x}, {0.y}, {0.z})".format(self)
+
+    def cross(self, other):
+        return Vector(self.y * other.z - other.y * self.z,
+                      self.z * other.x - other.z * self.x,
+                      self.x * other.y - other.x * self.y)
