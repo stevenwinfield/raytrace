@@ -1,0 +1,299 @@
+"""
+primitive.
+
+Defines the Primitive class - a base class for all renderable objects -
+and some primitives that derive from it.
+"""
+
+from random import random
+import math
+from abc import ABCMeta, abstractmethod
+
+from .vector import Vector
+from .constants import INFINITY, INTERSECTION_TOLERANCE
+
+
+class Primitive(metaclass=ABCMeta):
+    """Abstract base class for all renderable objects."""
+
+    _clone_attributes = ("material", "shader")
+
+    material = None
+    shader = None
+
+    def __init__(self, material, shader):
+        self.material = material
+        self.shader = shader
+        self._cached_bounding_box = None
+
+    def clone_attributes(self):
+        attrs = ()
+        for cls in type(self).__mro__:
+            if hasattr(cls, "_clone_attributes"):
+                attrs += cls._clone_attributes
+        return attrs
+
+    def clone(self, **replacements):
+        """Return a clone of self, optionally with changes."""
+        attrs = self.clone_attributes()
+        values = {attr: getattr(self, attr) for attr in attrs}
+        values.update(replacements)
+        return type(self)(**values)
+
+    def bounding_box(self):
+        if not self._cached_bounding_box:
+            self._cached_bounding_box = self._bounding_box()
+        return self._cached_bounding_box
+
+    @abstractmethod
+    def _bounding_box(self):
+        """Return an AxisAlignedBox that bounds this primitive."""
+
+    def intersection(self, ray, compute_normal=True):
+        distance, normal = self._intersection(ray, compute_normal)
+        return distance, normal
+
+    @abstractmethod
+    def _intersection(self, ray, compute_normal=True):
+        """Compute the intersection of the given ray with this primitive.
+
+        Return the distance along the ray that first intersects with
+        this primitive, or None if there is no intersection.
+        If compute_normal is True then also return the normal vector at
+        the point of intersection.
+
+        Note that the normal may have either a positive or a negative
+        projection along the ray's direction, i.e. intersections can occur
+        both on the "inside" and "outside" of a primitive.
+
+        A ray intersecting a primitive from the outside will have a negative
+        projection: ray.direction @ normal < 0
+        """
+
+    def __str__(self):
+        values = ", ".join("{}={}".format(key, getattr(self, key))
+                           for key in sorted(self.clone_attributes()))
+        return "{}({})".format(type(self).__name__, values)
+
+
+class AxisAlignedBox(Primitive):
+    """A box whose axes are aligned with the Cartesian coordinate system.
+
+    Defined by xmin, xmax, ymin, yman, zmin, zmax.
+    """
+
+    _clone_attributes = ("xmin", "xmax", "ymin", "ymax", "zmin", "zmax")
+
+    def __init__(self, xmin, xmax, ymin, ymax, zmin, zmax,
+                 material=None, shader=None):
+        super(AxisAlignedBox, self).__init__(material, shader)
+        self.xmin = xmin
+        self.xmax = xmax
+        self.ymin = ymin
+        self.ymax = ymax
+        self.zmin = zmin
+        self.zmax = zmax
+
+        self.min = Vector(xmin, ymin, zmin)
+        self.max = Vector(xmax, ymax, zmax)
+
+    def _bounding_box(self):
+        """Return the bounding box of an AxisAlignedBox: itself."""
+        return self
+
+    _tests = [(0, 1, 2, Vector(1.0, 0.0, 0.0)),
+              (1, 2, 0, Vector(0.0, 1.0, 0.0)),
+              (2, 0, 1, Vector(0.0, 0.0, 1.0))]
+
+    def _intersection(self, ray, compute_normal=True):
+        """Compute the intersection of a ray with an AxisAlignedBox."""
+        min_intersection_distance = INFINITY
+        min_normal = None
+
+        # Iterate over pairs of parallel planes
+        for index, other1, other2, normal in self._tests:
+            # if the ray direction is || to these planes there will be no
+            # intersection
+            if ray.direction[index] == 0.0:
+                continue
+
+            # Iterate over the two planes in this pair
+            for plane_distance, this_normal in ((self.min[index], -normal),
+                                                (self.max[index], normal)):
+                intersection_distance = ((plane_distance - ray.source[index]) /
+                                         ray.direction[index])
+                # if the intersection is in front of us...
+                if intersection_distance > 0.0:
+                    # ... see if the intersection point is bounded by the
+                    # two planes normal to direction "other1"
+                    intersection1 = (ray.source[other1] +
+                                     intersection_distance *
+                                     ray.direction[other1])
+
+                    if self.min[other1] <= intersection1 <= self.max[other1]:
+
+                        # ... and if that test passes then repeat with
+                        # direction "other2"...
+                        intersection2 = (ray.source[other2] +
+                                         intersection_distance *
+                                         ray.direction[other2])
+                        if (self.min[other2]
+                            <= intersection2
+                            <= self.max[other2]
+                            # ... then we have an intersection.
+                            # If this is the closest one so far then record it.
+                            and intersection_distance
+                                < min_intersection_distance):
+                            min_intersection_distance = intersection_distance
+                            min_normal = this_normal
+
+            return min_intersection_distance, min_normal
+
+    def combine(self, other):
+        """Return the AxisAlignedBox that contains self and other."""
+        return AxisAlignedBox(min(self.xmin, other.xmin),
+                              max(self.xmax, other.xmax),
+                              min(self.ymin, other.ymin),
+                              max(self.ymax, other.ymax),
+                              min(self.zmin, other.zmin),
+                              max(self.zmax, other.zmax))
+
+    def overlap(self, other):
+        """Return the AxisAlignedBox that is the overlap of self and other.
+
+        If there is no overlap then None is returned.
+        """
+        xmin = max(self.xmin, other.xmin)
+        xmax = min(self.xmax, other.xmax)
+        if xmax < xmin:
+            return None
+        ymin = max(self.ymin, other.ymin)
+        ymax = min(self.ymax, other.ymax)
+        if ymax < ymin:
+            return None
+        zmin = max(self.zmin, other.zmin)
+        zmax = min(self.zmax, other.zmax)
+        if zmax < zmin:
+            return None
+
+        return AxisAlignedBox(xmin, xmax, ymin, ymax, zmin, zmax)
+
+    def volume(self):
+        """Return the volume of this AxisAlignedBox"""
+        return ((self.xmax - self.xmin) *
+                (self.ymax - self.ymin) *
+                (self.zmax - self.zmin))
+
+    @classmethod
+    def infinite(cls):
+        """Return an infinite AxisAlignedBox."""
+        return cls(-INFINITY, INFINITY,
+                   -INFINITY, INFINITY,
+                   -INFINITY, INFINITY)
+
+
+class Sphere(Primitive):
+    """A sphere.
+
+    Defined by its centre (a vector) and its radius.
+    """
+
+    _clone_attributes = ("centre", "radius")
+
+    def __init__(self, centre, radius, material=None, shader=None):
+        """Initialise this sphere."""
+        super(Sphere, self).__init__(material, shader)
+        self.centre = centre
+        self.radius = radius
+        self._radius2 = self.radius * self.radius
+
+    def _bounding_box(self):
+        """Return a bounding box for this sphere."""
+        return AxisAlignedBox(self.centre.x - self.radius,
+                              self.centre.x + self.radius,
+                              self.centre.y - self.radius,
+                              self.centre.y + self.radius,
+                              self.centre.z - self.radius,
+                              self.centre.z + self.radius)
+
+    def _intersection(self, ray, compute_normal=True):
+        """Compute the intersection between the ray and this sphere."""
+        diff = self.centre - ray.source
+        diff2 = diff.norm2()
+        projection = ray.direction @ diff
+        projection2 = projection * projection
+
+        discriminant = projection2 - diff2 + self._radius2
+        if discriminant < 0.0:
+            intersection_distance = None
+        else:
+            sq_discriminant = math.sqrt(discriminant)
+            distance1 = projection + sq_discriminant
+            distance2 = projection - sq_discriminant
+
+            visible1 = distance1 >= 0.0
+            visible2 = distance2 >= 0.0
+
+            if visible1:
+                if visible2:
+                    intersection_distance = min(distance1, distance2)
+                else:
+                    intersection_distance = distance1
+            elif visible2:
+                intersection_distance = distance2
+            else:
+                intersection_distance = None
+
+        if compute_normal:
+            if intersection_distance is None:
+                normal = None
+            else:
+                normal = ray.point(intersection_distance) - self.centre
+                normal.normalize()
+        else:
+            normal = None
+
+        return intersection_distance, normal
+
+
+class FuzzySphere(Sphere):
+    """A Sphere with a rough surface."""
+
+    # TODO does this work with clone attributes?
+    def _intersection(self, ray, compute_normal=True):
+        """Compute the intersection between the ray and this sphere.
+
+        Adds some randomness to the normal of a regular sphere.
+        """
+        intersection_distance, normal = (super(FuzzySphere, self)
+                                         .intersection(ray, compute_normal))
+        if compute_normal and normal is not None:
+            normal += (Vector(random(), random(), random()) * 0.1).normalized()
+        return intersection_distance, normal
+
+
+class Plane(Primitive):
+
+    _clone_attributes = ("point", "normal")
+
+    def __init__(self, point, normal, material=None, shader=None):
+        super(Plane, self).__init__(material, shader)
+        self.point = point
+        self.normal = normal.normalized()
+        self._signed_distance = self.point @ self.normal
+
+    def _bounding_box(self):
+        """There is no finite bounding box for a plane."""
+        return AxisAlignedBox.infinite()
+
+    def _intersection(self, ray, compute_normal=True):
+        proj = ray.direction @ self.normal
+        if abs(proj) < INTERSECTION_TOLERANCE:  # TODO: almost_zero() ?
+            distance = None
+        else:
+            distance = ((self._signed_distance - ray.source @ self.normal)
+                        / proj)
+            if distance < 0.0:
+                distance = None
+
+        return distance, self.normal
