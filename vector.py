@@ -88,3 +88,13 @@ class Vector:
         return Vector(self.y * other.z - other.y * self.z,
                       self.z * other.x - other.z * self.x,
                       self.x * other.y - other.x * self.y)
+
+    def as_tuple(self):
+        return (self.x, self.y, self.z)
+
+    def __getitem__(self, index):
+        return self.as_tuple()[index]
+
+    def reflected(self, normal):
+        """Return self reflected from a surface with the given unit normal"""
+        return self - 2.0 * (self @ normal) * normal
