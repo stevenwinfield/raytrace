@@ -41,20 +41,20 @@ class Intersection(Primitive):
         d1_back, n1_back = self.object1.intersection(back_ray, True)
 
         inside1 = ((d1_fwd is not None and
-                    d1_fwd > INTERSECTION_TOLERANCE and
+                    ray.min_distance < d1_fwd < ray.max_distance and
                     n1_fwd @ ray.direction > 0.0) or
                    (d1_back is not None and
-                    d1_back > INTERSECTION_TOLERANCE and
+                    back_ray.min_distance < d1_back < back_ray.max_distance and
                     n1_back @ ray.direction < 0.0))
 
         d2_fwd, n2_fwd = self.object2.intersection(ray, True)
         d2_back, n2_back = self.object2.intersection(back_ray, True)
 
         inside2 = ((d2_fwd is not None and
-                    d2_fwd > INTERSECTION_TOLERANCE and
+                    ray.min_distance < d2_fwd < ray.max_distance and
                     n2_fwd @ ray.direction > 0.0) or
                    (d2_back is not None and
-                    d2_back > INTERSECTION_TOLERANCE and
+                    back_ray.min_distance < d2_back < back_ray.max_distance and
                     n2_back @ ray.direction < 0.0))
 
         if (d1_fwd or INFINITY) < (d2_fwd or INFINITY):
@@ -64,13 +64,13 @@ class Intersection(Primitive):
             first_intersection = (d2_fwd, n2_fwd)
             second_intersection = (d1_fwd, n1_fwd)
 
-        # The ray's source can outside both, just inside 1 or 2, or inside
+        # The ray's source can be outside both, just inside 1 or 2, or inside
         # both.
 
         if inside1:
             if inside2:
-                # We're inside both here, so the first forward intersection
-                # with either 1 or 2.
+                # We're inside both here, so return the first forward
+                # intersection with either 1 or 2.
                 return first_intersection
             else:
                 # We're inside 1, so return the forward intersection with 2
@@ -101,7 +101,7 @@ class Inverse(Primitive):
 
     Its geometry is the same, but its normals point in the opposide direction.
     """
-    
+
     def __init__(self, object_):
         """Initialise this Inverse with an object."""
         self.object = object_

@@ -122,8 +122,8 @@ class AxisAlignedBox(Primitive):
                                                 (self.max[index], normal)):
                 intersection_distance = ((plane_distance - ray.source[index]) /
                                          ray.direction[index])
-                # if the intersection is in front of us...
-                if intersection_distance > 0.0:
+                # if the intersection is within range...
+                if ray.min_distance < intersection_distance < ray.max_distance:
                     # ... see if the intersection point is bounded by the
                     # two planes normal to direction "other1"
                     intersection1 = (ray.source[other1] +
@@ -231,8 +231,8 @@ class Sphere(Primitive):
             distance1 = projection + sq_discriminant
             distance2 = projection - sq_discriminant
 
-            visible1 = distance1 >= 0.0
-            visible2 = distance2 >= 0.0
+            visible1 = ray.min_distance < distance1 < ray.max_distance
+            visible2 = ray.min_distance < distance2 < ray.max_distance
 
             if visible1:
                 if visible2:
@@ -293,7 +293,7 @@ class Plane(Primitive):
         else:
             distance = ((self._signed_distance - ray.source @ self.normal)
                         / proj)
-            if distance < 0.0:
+            if not (ray.min_distance < distance < ray.max_distance):
                 distance = None
 
         return distance, self.normal
