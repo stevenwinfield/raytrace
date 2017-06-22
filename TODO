@@ -16,3 +16,4 @@ make primitive a subclass of Shape. Make CSG objects subclasses of Shape.
 vector module -> linalg module (vector, matrix, quaternion)
 Add isosurface object
 Add transform
+Add profiling
