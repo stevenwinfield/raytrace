@@ -48,10 +48,10 @@ class Renderer:
 
         return result
 
-    def _compute_colour(self, ray, scene, depth=0, source_object=None):
+    def _compute_colour(self, ray, scene, depth=0):
         """Recursively compute the colour where a ray intersects an object."""
         colour = Colour()
-        obj, distance, normal = scene.intersection(ray, True, source_object)
+        obj, distance, normal = scene.intersection(ray, True)
         if distance is None:  # No intersections
             return colour
 
@@ -72,10 +72,11 @@ class Renderer:
             return colour.clamped()
 
         reflected_ray = Ray(intersection_point,
-                            ray.direction.reflected(normal))
+                            ray.direction.reflected(normal),
+                            # Avoid self-intersections
+                            min_distance=INTERSECTION_TOLERANCE)
         reflected_colour = self._compute_colour(reflected_ray, scene,
-                                                depth=depth + 1,
-                                                source_object=obj)
+                                                depth=depth + 1)
         reflected_colour *= obj.material.reflectivity
         colour += reflected_colour
 
@@ -96,7 +97,7 @@ class Renderer:
             # obscured by a different part of self
             ((intersection_point - light.position).norm() - distance)
             > INTERSECTION_TOLERANCE):
-                return BLACK  # We are obscured
+                    return BLACK  # We are obscured
         else:
             intensity = light.intensity / (distance * distance)
             cos_angle = -ray.direction @ normal
