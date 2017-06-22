@@ -23,6 +23,11 @@ class Vector:
         """Return the norm of this vector."""
         return math.sqrt(self.norm2())
 
+    def __eq__(self, other):
+        return (self.x == other.x and
+                self.y == other.y and
+                self.z == other.z)
+
     def __matmul__(self, other):
         if isinstance(other, Vector):
             return self.x * other.x + self.y * other.y + self.z * other.z
