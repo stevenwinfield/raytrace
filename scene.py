@@ -106,7 +106,7 @@ class Scene:
 
         return self.tree.intersection(ray, compute_normal, source_object)
 
-    def intersection(self, ray, compute_normal=True, source_object=None):
+    def intersection(self, ray, compute_normal=True):
         """Compute the intersection of this ray with all objects in the scene.
 
         Returns the object, +ve distance along the ray, and normal of the
@@ -119,13 +119,10 @@ class Scene:
         min_obj = None
         for obj in self.objects:
             distance, normal = obj.intersection(ray, compute_normal)
-            if (distance is not None and
-                distance < min_distance and
-                (source_object is None or source_object is obj and
-                 distance > self.intersect_tolerance)):
-                    min_distance = distance
-                    min_normal = normal
-                    min_obj = obj
+            if (distance is not None and distance < min_distance):
+                min_distance = distance
+                min_normal = normal
+                min_obj = obj
 
         if min_distance == INFINITY:  # No intersections
             min_distance = None
