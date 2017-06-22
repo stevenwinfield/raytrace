@@ -9,6 +9,7 @@ rays which should be traced.
 
 
 from abc import ABCMeta, abstractmethod
+from math import pi, sin, cos
 
 from .ray import Ray
 
@@ -114,4 +115,29 @@ class Equirectangular(Camera):
         self.eye = eye
         self.forward = forward.normalized()
         # Ensure "up" is _|_ to "forward"
-        self.up = (up - (up @ self.forward) * self.forward).normalized
+        self.up = (up - (up @ self.forward) * self.forward).normalized()
+        self.right = self.forward.cross(self.up)
+
+    def rays(self, image_width, image_height=None,
+             xmin=0, xmax=None, ymin=0, ymax=None):
+        """Yield the rays for an equirectangular camera."""
+        image_height = image_height or image_width / 2
+        dphi = 2.0 * pi / image_width
+        dtheta = pi / image_height
+        left = -self.right
+        back = -self.forward
+        down = -self.up
+        for y in coordinate_range(ymin, ymax, image_height):
+            theta = (image_height / 2 - y + 0.5) * dtheta
+            sin_theta = sin(theta)
+            cos_theta = cos(theta)
+            for x in coordinate_range(xmin, xmax, image_width):
+                phi = (x + 0.5) * dphi
+                sin_phi = sin(phi)
+                cos_phi = cos(phi)
+                # shoot rays from 'eye' to
+                # (cos(phi)sin(theta), sin(phi)sin(theta), cos(theta))
+                direction = (cos_phi * sin_theta * back +
+                             sin_phi * sin_theta * left +
+                             cos_theta * down)
+                yield (x, y, Ray(self.eye, direction))
