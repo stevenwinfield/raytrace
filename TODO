@@ -1,0 +1,12 @@
+TODO:
+
+Equirectangular camera
+VR Equirectangular camera
+Fix self-intersection when computing reflections - use ray min/max distance.
+Create and use RayIntersectionResult
+More CSG: difference, union, merge
+unit tests
+make primitive a subclass of Shape. Make CSG objects subclasses of Shape.
+vector module -> linalg module (vector, matrix, quaternion)
+Add isosurface object
+Add transform
