@@ -1,9 +1,8 @@
 TODO:
 
-Equirectangular camera
-VR Equirectangular camera
-Create and use RayIntersectionResultray
+Create and use RayIntersectionResult
 More CSG: difference, union, merge
+add ray.refracted
 unit tests:
     vector (done)
     ray
@@ -11,9 +10,11 @@ unit tests:
     scene
     primitive
     camera
-
+cameras should suggest width/height to the renderer, given incomplete info,
+    or raise.
 make primitive a subclass of Shape. Make CSG objects subclasses of Shape.
 vector module -> linalg module (vector, matrix, quaternion)
 Add isosurface object
 Add transform
 Add profiling
+Add cylinder primitive
