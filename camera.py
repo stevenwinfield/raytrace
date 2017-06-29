@@ -108,6 +108,7 @@ class Equirectangular(Camera):
 
     It renders a full 360 degree image of the scene, suitable for viewing
     with VR headsets.
+
     """
 
     def __init__(self, eye, up, forward):
@@ -121,23 +122,107 @@ class Equirectangular(Camera):
     def rays(self, image_width, image_height=None,
              xmin=0, xmax=None, ymin=0, ymax=None):
         """Yield the rays for an equirectangular camera."""
+        # In spherical polar coordinates, phi sweeps from zero (along the
+        # +x axis), through pi/2 (+y), pi (-x) 3pi/2 (-y), finishing at 2pi
+        # (+x again).
+        # theta sweeps from zero (+z axis) through pi/2 (xy plane) to pi
+        # (-z axis)
+
+        # if we imagine that +x is along the "right" direction, +y is in the
+        # "forward" dirction, and (therefore) +z is in the "up" direction,
+        # and we would like the "forward" direction to be in the centre of the
+        # image, then we must instead sweep phi from 3pi/2 down to -pi/2,
+        # and theta from pi to zero.
+
         image_height = image_height or image_width / 2
-        dphi = 2.0 * pi / image_width
-        dtheta = pi / image_height
-        left = -self.right
-        back = -self.forward
-        down = -self.up
+
+        phi0 = 3.0 * pi / 2.0
+        dphi = -2.0 * pi / image_width
+        theta0 = pi
+        dtheta = -pi / image_height
+
         for y in coordinate_range(ymin, ymax, image_height):
-            theta = (image_height / 2 - y + 0.5) * dtheta
+            theta = theta0 + (y + 0.5) * dtheta
             sin_theta = sin(theta)
             cos_theta = cos(theta)
             for x in coordinate_range(xmin, xmax, image_width):
-                phi = (x + 0.5) * dphi
+                phi = phi0 + (x + 0.5) * dphi
                 sin_phi = sin(phi)
                 cos_phi = cos(phi)
                 # shoot rays from 'eye' to
                 # (cos(phi)sin(theta), sin(phi)sin(theta), cos(theta))
-                direction = (cos_phi * sin_theta * back +
-                             sin_phi * sin_theta * left +
-                             cos_theta * down)
+                direction = (cos_phi * sin_theta * self.right +
+                             sin_phi * sin_theta * self.forward +
+                             cos_theta * self.up)
                 yield (x, y, Ray(self.eye, direction))
+
+
+class StereoEquirectangular(Camera):
+    """A Camera that uses the equirectangular projection and renders a
+    stereoscopic image.
+
+    It renders a full 360 degree image of the scene, twice, where each pixel
+    is rendered as if the virtual head is looking straight at it.
+
+    The top half of the resultant image is for the left eye, the bottom half
+    for the right.
+    """
+
+    def __init__(self, centre, up, forward, eye_separation):
+        """Initialise a StereoEquirectangular camera."""
+        self.centre = centre
+        self.forward = forward.normalized()
+        # Ensure "up" is _|_ to "forward"
+        self.up = (up - (up @ self.forward) * self.forward).normalized()
+        self.eye_separation = eye_separation
+        self.right = self.forward.cross(self.up)
+
+    def rays(self, image_width, image_height=None,
+             xmin=0, xmax=None, ymin=0, ymax=None):
+        """Yield the rays for an equirectangular camera."""
+        # As with the Equirectangular camera, we sweep phi from 3pi/2 to -pi/2
+        # and theta from pi to zero, but now the source of each ray is
+        # different.
+        # The sources all lie on a circle, centred on 'centre', in the
+        # (forward, right) plane of radius eye_separation / 2
+        # When phi = pi / 2 (i.e. we are looking forward) the left eye will be
+        # at pi, while the right eye will be at 0
+
+        image_height = image_height or image_width
+        two_pi = 2.0 * pi
+        half_pi = pi / 2.0
+
+        phi0 = 3.0 * half_pi
+        dphi = -two_pi / image_width
+        theta0 = pi
+        dtheta = -two_pi / image_height
+        radius = self.eye_separation / 2.0
+
+        for y in coordinate_range(ymin, ymax, image_height):
+            is_left_eye = 2 * y > image_height
+
+            theta = theta0 + (y + 0.5) * dtheta
+            if is_left_eye:
+                theta -= pi
+
+            sin_theta = sin(theta)
+            cos_theta = cos(theta)
+
+            for x in coordinate_range(xmin, xmax, image_width):
+                phi = phi0 + (x + 0.5) * dphi
+                sin_phi = sin(phi)
+                cos_phi = cos(phi)
+
+                phi_eye = phi + (half_pi if is_left_eye else -half_pi)
+                sin_phi_eye = sin(phi_eye)
+                cos_phi_eye = cos(phi_eye)
+
+                eye_pos = (self.centre +
+                           radius * (cos_phi_eye * self.right +
+                                     sin_phi_eye * self.forward))
+
+                direction = (cos_phi * sin_theta * self.right +
+                             sin_phi * sin_theta * self.forward +
+                             cos_theta * self.up)
+
+                yield (x, y, Ray(eye_pos, direction))
