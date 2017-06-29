@@ -16,7 +16,12 @@ def main():
     else:
         height = None
 
-    result.view(width, height)
+    #result.view(width, height)
+
+    if len(sys.argv) > 4:
+        result.image().save(sys.argv[4])
+
+    print("Done")
 
 if __name__ == "__main__":
     main()
