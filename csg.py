@@ -124,3 +124,13 @@ class Inverse(Primitive):
         """Flip the surface normal at the point of intersection."""
         result = self.object.intersection(ray, compute_normal)
         return result[0], -result[1] if result[1] is not None else None
+
+
+def Difference(object1, object2, material=None, shader=None):
+    """Return the difference of two objects.
+
+    The second object is subtracted from the first, i.e. the part of the
+    second object that was inside the first is outside the Difference.
+    """
+    return Intersection(object1, Inverse(object2), material=material,
+                        shader=shader)
