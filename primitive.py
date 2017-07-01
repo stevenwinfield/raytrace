@@ -297,3 +297,138 @@ class Plane(Primitive):
                 distance = None
 
         return distance, self.normal
+
+
+class InfiniteCylinder(Primitive):
+
+    _clone_attributes = ("axis_point", "axis_direction", "radius")
+
+    def __init__(self, axis_point, axis_direction, radius, material=None,
+                 shader=None):
+        super(InfiniteCylinder, self).__init__(material, shader)
+        self.axis_point = axis_point
+        self.axis_direction = axis_direction.normalized()
+        self.radius = radius
+        self._radius2 = radius * radius
+
+    def _bounding_box(self):
+        return AxisAlignedBox.infinite()
+
+    def _intersection(self, ray, compute_normal=True):
+
+        d = ray.direction.project_out(self.axis_direction)
+        a = d.norm2()
+        if a == 0.0:
+            return None, None
+
+        diff = (ray.source - self.axis_point).project_out(self.axis_direction)
+
+        b_2 = d @ diff
+        c = diff.norm2() - self._radius2
+        discriminant = b_2 * b_2 - a * c
+
+        if discriminant < 0.0:
+            return None, None
+
+        lambda1 = (math.sqrt(discriminant) - b_2) / a
+        lambda2 = (-math.sqrt(discriminant) - b_2) / a
+
+        # Find the closest intersection, if any, that is between the ray's
+        # min and max distances
+        if lambda1 < lambda2 and ray.min_distance < lambda1 < ray.max_distance:
+            distance = lambda1
+        elif ray.min_distance < lambda2 < ray.max_distance:
+            distance = lambda2
+        else:
+            return None, None
+
+        if compute_normal:
+            normal = (diff + distance * d).normalized()
+        else:
+            normal = None
+
+        return distance, normal
+
+
+class Cylinder(Primitive):
+
+    _clone_attributes = ("axis_start", "axis_end", "radius")
+
+    def __init__(self, axis_start, axis_end, radius, material=None,
+                 shader=None):
+        super(Cylinder, self).__init__(material, shader)
+        self.axis_start = axis_start
+        self.axis_end = axis_end
+        self.axis_direction = (axis_end - axis_start).normalized()
+        self.length = (axis_end - axis_start).norm()
+        self.radius = radius
+        self._radius2 = radius * radius
+
+    def _bounding_box(self):
+        start_box = AxisAlignedBox(self.axis_start.x - self.radius,
+                                   self.axis_start.x + self.radius,
+                                   self.axis_start.y - self.radius,
+                                   self.axis_start.y + self.radius,
+                                   self.axis_start.z - self.radius,
+                                   self.axis_start.z + self.radius)
+
+        end_box = AxisAlignedBox(self.axis_end.x - self.radius,
+                                 self.axis_end.x + self.radius,
+                                 self.axis_end.y - self.radius,
+                                 self.axis_end.y + self.radius,
+                                 self.axis_end.z - self.radius,
+                                 self.axis_end.z + self.radius)
+
+        return start_box.combine(end_box)
+
+    def _intersection(self, ray, compute_normal=True):
+
+        d = ray.direction.project_out(self.axis_direction)
+        a = d.norm2()
+        if a == 0.0:
+            return None, None
+
+        diff = (ray.source - self.axis_start).project_out(self.axis_direction)
+
+        b_2 = d @ diff
+        c = diff.norm2() - self._radius2
+        discriminant = b_2 * b_2 - a * c
+
+        if discriminant < 0.0:
+            return None, None
+
+        lambda1 = (math.sqrt(discriminant) - b_2) / a
+        lambda2 = (-math.sqrt(discriminant) - b_2) / a
+
+        lambda_min, lambda_max = ((lambda1, lambda2) if lambda1 < lambda2 else
+                                  (lambda2, lambda1))
+
+        # Find the closest intersection, if any, that is between the ray's
+        # min and max distances
+        distance = None
+        if ray.min_distance < lambda_min < ray.max_distance:
+            distance = lambda_min
+            intersection_point = ray.point(distance)
+            along_axis = ((intersection_point - self.axis_start)
+                          @ self.axis_direction)
+            if not (0.0 <= along_axis <= self.length):
+                distance = None
+
+        if (distance is None and
+            ray.min_distance < lambda_max < ray.max_distance):
+            distance = lambda_max
+            intersection_point = ray.point(distance)
+            along_axis = ((intersection_point - self.axis_start)
+                          @ self.axis_direction)
+            if not (0.0 <= along_axis <= self.length):
+                distance = None
+
+        if distance is None:
+            return None, None
+
+        if compute_normal:
+            normal = (diff + distance * d).normalized()
+        else:
+            normal = None
+
+        return distance, normal
