@@ -111,8 +111,6 @@ class Scene:
 
         Returns the object, +ve distance along the ray, and normal of the
         point of nearest intersection.
-        source_object, if given, is the source of the ray. Used to test
-        for self-intersections with low distances, caused by roundoff errors.
         """
         min_distance = INFINITY
         min_normal = None
