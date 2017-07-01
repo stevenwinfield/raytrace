@@ -100,7 +100,7 @@ class Renderer:
                     return BLACK  # We are obscured
         else:
             intensity = light.intensity / (distance * distance)
-            cos_angle = -ray.direction @ normal
+            cos_angle = abs(-ray.direction @ normal)
             colour = (obj.material.diffuse * light.colour *
                       cos_angle * intensity).clamped()
             return colour
@@ -120,7 +120,7 @@ class Renderer:
             return BLACK
         else:
             attenuation = light.intensity / (distance * distance)
-            cos_angle = -ray.direction @ normal
+            cos_angle = abs(-ray.direction @ normal)
             specular = (pow(cos_angle, obj.material.shinyness)
                         * obj.material.specular)
             return (specular * light.colour * attenuation).clamped()
