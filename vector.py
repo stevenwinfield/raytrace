@@ -103,3 +103,11 @@ class Vector:
     def reflected(self, normal):
         """Return self reflected from a surface with the given unit normal"""
         return self - 2.0 * (self @ normal) * normal
+
+    def project_out(self, other, normalized=False):
+        """Return self with any component along other removed.
+
+           If other is known to be normalized, pass normalized=True.
+        """
+        unit = other if normalized else other.normalized()
+        return self - (self @ unit) * unit
