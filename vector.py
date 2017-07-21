@@ -1,7 +1,7 @@
 """
-vector.
+linalg.
 
-Defines the Vector class
+Linear Algebra.
 """
 
 import math
@@ -104,10 +104,63 @@ class Vector:
         """Return self reflected from a surface with the given unit normal"""
         return self - 2.0 * (self @ normal) * normal
 
+    def refracted(self, normal, ior):
+        """Return self after refraction.
+
+        Uses the given unit normal and index of refraction.
+        """
+        # ior = sin i / sin r
+
     def project_out(self, other, normalized=False):
         """Return self with any component along other removed.
 
-           If other is known to be normalized, pass normalized=True.
+        If other is known to be normalized, pass normalized=True.
         """
         unit = other if normalized else other.normalized()
         return self - (self @ unit) * unit
+
+    def __getstate__(self):
+        return (self.x, self.y, self.z)
+
+    def __setstate__(self, state):
+        self.x, self.y, self.z = state
+
+
+class Matrix:
+
+    def __init__(self, values=None):
+        """Initialise from a list of 3-item lists (the rows)"""
+        self.x = values or [[0.0, 0.0, 0.0] for _ in range(3)]
+
+    def det(self):
+        """Return the determinant of this matrix"""
+        return (self.x[0][0] * (self.x[1][1] * self.x[2][2] - self.x[1][2] * self.x[2][1]) -
+                self.x[0][1] * (self.x[1][0] * self.x[2][2] - self.x[1][2] * self.x[2][0]) +
+                self.x[0][2] * (self.x[1][0] * self.x[2][1] - self.x[1][1] * self.x[2][0]))
+
+    def is_singular(self):
+        """Return True if this matrix is singular."""
+        return self.det() == 0.0
+
+    def t(self):
+        """Return the transpose of self."""
+        return type(self)(self.x[0][0], self.x[1][0], self.x[2][0], 
+                          self.x[0][1], self.x[1][1], self.x[2][1],
+                          self.x[0][2], self,x[1][2], self.x[2][2])
+
+    def __matmul__(self, other):
+        if isinstance(other, Vector):
+            result = Vector()
+            for j in range(3):
+                for i in range(3):
+                    result[i] += self.x[i][j] * other[j]
+        elif isinstance(other, Matrix):
+            result = Matrix()
+            for k in range(3):
+                for j in range(3):
+                    for i in range(3):
+                        result[i][j] += self.x[i][k] * other.x[k][j]
+        else:
+            return NotImplemented
+
+        return result
