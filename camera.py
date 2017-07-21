@@ -10,6 +10,7 @@ rays which should be traced.
 
 from abc import ABCMeta, abstractmethod
 from math import pi, sin, cos
+from random import shuffle
 
 from .ray import Ray
 
@@ -31,12 +32,36 @@ class Camera(metaclass=ABCMeta):
         of the rays to be yielded.
         """
 
+    @abstractmethod
+    def __getstate__(self):
+        """Used to implement pickling."""
+
+    @abstractmethod
+    def __setstate__(self):
+        """Used to implement pickling."""
+
     def ray_count(self, image_width, image_height,
                   xmin=0, xmax=None, ymin=0, ymax=None):
         """Return the number of rays that will be yielded."""
         return (len(coordinate_range(xmin, xmax, image_width)) *
                 len(coordinate_range(ymin, ymax, image_height)))
 
+class Shuffler(Camera):
+    def __init__(self, camera):
+        self.camera = camera
+    def __getstate__(self):
+        return (self.camera,)
+    def __setstate__(self, state):
+        self.camera, = state
+    def ray_count(self, image_width, image_height,
+                  xmin=0, xmax=None, ymin=0, ymax=None):
+        return self.camera.ray_count(image_width, image_height,
+                                     xmin, xmax, ymin, ymax)
+    def rays(self, image_width, image_height,
+             xmin=0, xmax=None, ymin=0, ymax=None):
+        rays = list(self.camera.rays(image_width, image_height, xmin, xmax, ymin, ymax))
+        shuffle(rays)
+        return iter(rays)
 
 class Orthographic(Camera):
     """A Camera with orthographic projection."""
@@ -50,6 +75,14 @@ class Orthographic(Camera):
         self.width = width
         self.height = height
         self.right = forward.cross(up).normalized()
+
+    def __getstate__(self):
+        return (self.position, self.forward, self.up, self.width, self.height,
+                self.right)
+
+    def __setstate__(self, state):
+        (self.position, self.forward, self.up, self.width, self.height,
+         self.right) = state
 
     def rays(self, image_width, image_height,
              xmin=0, xmax=None, ymin=0, ymax=None):
@@ -85,6 +118,14 @@ class Perspective(Camera):
         self.fov_distance = fov_distance
         self.right = forward.cross(up).normalized()
 
+    def __getstate__(self):
+        return (self.eye, self.up, self.forward, self.fov_width,
+                self.fov_height, self.fov_distance, self.right)
+
+    def __setstate__(self, state):
+        (self.eye, self.up, self.forward, self.fov_width,
+         self.fov_height, self.fov_distance, self.right) = state
+
     def rays(self, image_width, image_height,
              xmin=0, xmax=None, ymin=0, ymax=None):
         """Yield the rays for a Perspective camera."""
@@ -118,6 +159,12 @@ class Equirectangular(Camera):
         # Ensure "up" is _|_ to "forward"
         self.up = (up - (up @ self.forward) * self.forward).normalized()
         self.right = self.forward.cross(self.up)
+
+    def __getstate__(self):
+        return (self.eye, self.forward, self.up, self.right)
+
+    def __setstate__(self, state):
+        self.eye, self.forward, self.up, self.right = state
 
     def rays(self, image_width, image_height=None,
              xmin=0, xmax=None, ymin=0, ymax=None):
@@ -176,6 +223,14 @@ class StereoEquirectangular(Camera):
         self.up = (up - (up @ self.forward) * self.forward).normalized()
         self.eye_separation = eye_separation
         self.right = self.forward.cross(self.up)
+
+    def __getstate__(self):
+        return (self.centre, self.forward, self.up, self.eye_separation,
+                self.right)
+
+    def __setstate__(self, state):
+        (self.centre, self.forward, self.up, self.eye_separation,
+         self.right) = state
 
     def rays(self, image_width, image_height=None,
              xmin=0, xmax=None, ymin=0, ymax=None):
