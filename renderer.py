@@ -18,8 +18,15 @@ class Renderer:
         """Initialise this Renderer."""
         self.recursion_depth = recursion_depth
 
+    def __getstate__(self):
+        return (self.recursion_depth,)
+
+    def __setstate__(self, state):
+        self.recursion_depth, = state
+
     def render(self, scene, camera, width, height,
-               xmin=0, xmax=None, ymin=0, ymax=None):
+               xmin=0, xmax=None, ymin=0, ymax=None,
+               result=None, hook=None):
         """Render the scene, viewed with the given camera.
 
         Output is an image of size width x height.
@@ -28,7 +35,7 @@ class Renderer:
         g = ResultComponent.green
         b = ResultComponent.blue
 
-        result = RenderResult(width, height, (r, g, b))
+        result = result or RenderResult(width, height, (r, g, b))
 
         total_rays = camera.ray_count(width, height, xmin, xmax, ymin, ymax)
 
@@ -44,6 +51,8 @@ class Renderer:
             result[x, y, r] = colour.red
             result[x, y, g] = colour.green
             result[x, y, b] = colour.blue
+            if hook:
+                hook(x, y, colour)
             # TODO: depth, count, object id
 
         return result
