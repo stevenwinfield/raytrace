@@ -19,3 +19,6 @@ Add transform
 Add profiling
 transparent materials with specified indices of refraction
 area lights
+gui + progressive rendering
+parallel rendering with cpython or pypy using execnet
+
