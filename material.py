@@ -17,3 +17,11 @@ class Material:
         self.reflectivity = reflectivity
         self.specular = specular or WHITE
         self.shinyness = shinyness
+
+    def __getstate__(self):
+        return (self.ambient, self.diffuse, self.reflectivity,
+                self.specular, self.shinyness)
+
+    def __setstate__(self, state):
+        (self.ambient, self.diffuse, self.reflectivity,
+         self.specular, self.shinyness) = state

@@ -14,6 +14,12 @@ class Colour:
         self.green = green
         self.blue = blue
 
+    def __getstate__(self):
+        return (self.red, self.green, self.blue)
+
+    def __setstate__(self, state):
+        self.red, self.green, self.blue = state
+
     def _get_red(self):
         return self._red
 

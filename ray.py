@@ -28,6 +28,14 @@ class Ray:
         self.min_distance = min_distance
         self.max_distance = max_distance
 
+    def __getstate__(self):
+        return (self.source, self.direction, self.min_distance,
+                self.max_distance)
+
+    def __setstate__(self, state):
+        (self.source, self.direction, self.min_distance,
+         self.max_distance) = state
+
     def point(self, distance):
         """Return a point on this ray a given distance from its source."""
         return self.source + distance * self.direction

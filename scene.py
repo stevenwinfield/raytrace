@@ -23,6 +23,12 @@ class ObjectGroup:
         for object_ in objects:
             self.add_object(object_)
 
+    def __getstate__(self):
+        return (self.objects, self._bounding_box)
+
+    def __setstate__(self, state):
+        self.objects, self._bounding_box = state
+
     def add_object(self, object_):
         """Add an object to this ObjectGroup."""
         self.objects.add(object_)
@@ -91,6 +97,12 @@ class Scene:
         self.lights = set()
         self.objects = set()
         self.tree = None
+
+    def __getstate__(self):
+        return (self.lights, self.objects, self.tree)
+
+    def __setstate__(self, state):
+        self.lights, self.objects, self.tree = state
 
     def intersection_old(self, ray, compute_normal=True, source_object=None):
         """Compute the intersection of this ray with all objects in the scene.

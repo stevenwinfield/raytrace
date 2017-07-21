@@ -26,6 +26,13 @@ class Primitive(metaclass=ABCMeta):
         self.shader = shader
         self._cached_bounding_box = None
 
+    def __getstate__(self):
+        return tuple(getattr(self, attr) for attr in self.clone_attributes())
+
+    def __setstate__(self, state):
+        for attr, value in zip(self.clone_attributes(), state):
+            setattr(self, attr, value)
+
     def clone_attributes(self):
         attrs = ()
         for cls in type(self).__mro__:
