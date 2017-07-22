@@ -10,8 +10,8 @@ class RenderWidget(QWidget):
         self.image_width = image_width
         self.image_height = image_height
         self.setFixedSize(image_width, image_height)
-        self.image = QImage(image_width, image_height, QImage.Format_ARGB32)
-        self.image.fill(Qt.black)
+        self.image = None
+        self.clear()
 
     def paintEvent(self, _paint_event):
         painter = QPainter(self)
@@ -24,6 +24,9 @@ class RenderWidget(QWidget):
         for x, y, colour in data:
             self.set_pixel(x, y, data)
 
+    def clear(self):
+        self.image = QImage(self.image_width, self.image_height, QImage.Format_ARGB32)
+        self.image.fill(Qt.black)
 
 class RenderWindow(QWidget):
     def __init__(self, renderer, image_width, image_height, scene=None, camera=None, parent=None):
@@ -61,9 +64,13 @@ class RenderWindow(QWidget):
 
     def render(self):
         self._pixel_count = 0
-        return self.renderer.render(self.scene, self.camera,
-                                    self.image_width, self.image_height,
-                                    hook=self._render_hook)
+        self.button.setEnabled(False)
+        self.render_widget.clear()
+        result = self.renderer.render(self.scene, self.camera,
+                                      self.image_width, self.image_height,
+                                      hook=self._render_hook)
+        self.button.setEnabled(True)
+        return result
 
     def _render_hook(self, x, y, colour):
         self._pixel_count += 1
