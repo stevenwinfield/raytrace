@@ -6,9 +6,6 @@ from raytrace.primitive import Sphere, Plane
 from raytrace.renderer import Renderer
 from raytrace.material import Material
 from raytrace.light import Point
-from raytrace.gui import RenderWindow
-
-from PyQt5.QtWidgets import QApplication
 
 def render():
     scene = Scene()
@@ -29,10 +26,8 @@ def render():
 
     renderer = Renderer(recursion_depth=2)
 
-    app = QApplication([])
-    window = RenderWindow(renderer, 640, 360, scene, camera)
-    window.show()
-    window.app.exec_()
+    result = renderer.render(scene, camera, 320, 180)
+    result.view()
 
 if __name__ == "__main__":
     render()
