@@ -14,6 +14,7 @@ from random import shuffle
 
 from .ray import Ray
 
+__all__ = ["Equirectangular", "Orthographic", "Perspective", "Shuffler", "StereoEquirectangular"]
 
 def coordinate_range(min_value, max_value, size):
     """Construct the range of values that will be iterated over."""

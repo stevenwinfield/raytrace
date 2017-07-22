@@ -9,6 +9,7 @@ from functools import lru_cache, partial
 from .constants import INFINITY, INTERSECTION_TOLERANCE
 from .ray import Ray
 
+__all__ = ["Scene"]
 
 class ObjectGroup:
     """A group of objects and/or other ObjectGroups.
