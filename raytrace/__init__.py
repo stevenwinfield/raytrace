@@ -1,2 +1,2 @@
-from camera import *
-from scene import *
+from .camera import *
+from .scene import *
