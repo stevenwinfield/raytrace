@@ -41,8 +41,6 @@ class Renderer:
 
         for i, (x, y, ray) in enumerate(camera.rays(width, height,
                                                     xmin, xmax, ymin, ymax)):
-            if i % 10000 == 0:
-                print("{:0.2%}".format(i / total_rays))
             try:
                 colour = self._compute_colour(ray, scene)
             except Exception as exc:
