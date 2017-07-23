@@ -32,6 +32,7 @@ def render():
     app = QApplication([])
     window = RenderWindow(renderer, 640, 360, scene, camera)
     window.show()
+    window.setWindowTitle("Example rendering with GUI")
     window.app.exec_()
 
 if __name__ == "__main__":
